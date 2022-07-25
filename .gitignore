@@ -1,0 +1,10 @@
+configure/CONFIG.PyDevice
+O.linux*
+O.Common
+envPaths
+bin/
+lib/
+db/
+dbd/
+*.pyc
+include/pyRecord.h

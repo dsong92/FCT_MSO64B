@@ -1,0 +1,156 @@
+import socket
+#import struct
+import sys
+import pyvisa as visa
+import numpy as np
+from struct import unpack
+from matplotlib import pyplot as plt
+import time
+
+# Ethernet setting
+# Utility-I/O-LAN - DHCP (auto set) or TCP/IP
+
+#start = time.time() # 시작시간
+rm = visa.ResourceManager()
+
+Sampling_Rate = '6.25e+9' # 6.25 GS/s
+Horizontal_Scale = '10e-9' # 10 ns 
+Bandwidth = '1e+9' # 1 GHz
+Offset = '0' # offset 0 V
+Vertical_Scale = '0.5' # 0.5V/dev
+Resistance = 50 # 50 ohm
+Trigger_Level = 0.25 # 0.25 V
+DataPoint = 6000 # 
+
+print("************   test1 *************** ")
+
+class FCT_MSO64B_Client(object):
+    def __init__(self):
+        print("************   test2 *************** ")
+        self._scope = rm.open_resource('TCPIP0::192.168.0.31::inst0::INSTR')
+        self.S('HORizontal:SAMPLERate 6.25e+9')
+        self.S('HORizontal:SCAle 10e-9')
+        self.S('CH1:BANdwidth: 1e+9')
+        self.S('CH1:OFFSet 0')
+        self.S('CH1:SCAle 0.5')
+        self.S('CH1:RESISTANCE 50')
+
+        self._PeakV = 0.0
+        self._Samples_array = []
+        #tmp_np = np.array(self.Q('CURVe?').split(','))
+        #tmp_np[len(tmp_np)-1] = tmp_np[len(tmp_np-1)].replace("\n","")
+        #tmp_np = tmp_np.astype(np.int64)
+        #self._PeakV = max(tmp_np)
+        #print(max(tmp_np))
+
+    def Get_PeakV_CH1(self):
+        self.S('DATa:SOUrce CH1')
+        self.S('DATa:START 1')
+        self.S('DATa:STOP 6000')
+        
+        self.S('TRIGGER:A:LEVEL:CH1 0.25')
+        
+        self.S('WFMOutpre:ENCdg ASCii')
+        self.S('WFMOutpre:BYT_Nr 1')
+        self.S('HEADer 0')
+
+        ch1_np = np.array((self.Q('CURVe?')).split(','))
+        print(ch1_np)
+        ch1_np = ch1_np.astype(float)
+        ch1_peakV = max(ch1_np)
+        print(ch1_peakV)
+        pydev.iointr('ch1', ch1_peakV)
+        return 1
+
+    def Get_PeakV_CH3(self):
+        self.S('DATa:SOUrce CH3')
+        self.S('DATa:START 1')
+        self.S('DATa:STOP 6000')
+        
+        self.S('TRIGGER:A:LEVEL:CH3 0.25')
+        
+        self.S('WFMOutpre:ENCdg ASCii')
+        self.S('WFMOutpre:BYT_Nr 1')
+        self.S('HEADer 0')
+
+        ch3_np = np.array((self.Q('CURVe?')).split(','))
+        ch3_np = ch3_np.astype(float)
+        ch3_peakV = max(ch3_np)
+
+        pydev.iointr('ch3', ch3_peakV)
+        return 1
+
+    # S( write ) : only send commend
+    def S(self, commend):
+        return self._scope.write(commend)
+
+    # Q ( query ) : send commend and read the response
+    def Q(self, commend):
+        return self._scope.query(commend)
+
+
+'''
+Scope = rm.open_resource('TCPIP0::192.168.0.31::inst0::INSTR')
+
+Sampling_Rate = '6.25e_+9' # 6.25 GS/s
+Horizontal_Scale = '10e-9' # 10 ns 
+Bandwidth = '1e+9' # 1 GHz
+Offset = '0' # offset 0 V
+Vertical_Scale = '0.5' # 0.5V/dev
+Resistance = 50 # 50 ohm
+Trigger_Level = 0.25 # 0.25 V
+DataPoint = 6000 # 
+
+def S(commend):
+    return Scope.write(commend) # Write 헤더 # Write - 명령을 계측기에 씀
+def Q(commend):
+    return Scope.query(commend) # Query 헤더 # Query - 명령을 계측기에 쓰고 응답을 다시 읽음
+
+S('HORizontal:SAMPLERate {}'.format(Sampling_Rate))
+S('HORizontal:SCAle {}'.format(Horizontal_Scale))
+S('CH1:BANdwidth: {}'.format(Bandwidth))
+S('CH1:OFFSet {}'.format(Offset))
+S('CH1:SCAle {}'.format(Vertical_Scale))
+S('CH1:RESISTANCE {}'.format(Resistance))
+#S('CH3:BANdwidth: {}'.format(Bandwidth))
+#S('CH3:OFFSet {}'.format(Offset))
+#S('CH3:SCAle {}'.format(Vertical_Scale))
+#S('CH3:RESISTANCE {}'.format(Resistance))
+S('TRIGGER:A:LEVEL:CH1 {}'.format(Trigger_Level))
+#S('TRIGGER:A:LEVEL:CH3 {}'.format(Trigger_Level))
+
+print("***** test1 ******")
+
+def FCT():
+    print("********** test ************")
+    S('DATa:SOUrce CH1')
+    S('DATa:START 1')
+    S('DATa:START {}'.format(DataPoint))
+    S('WFMOutpre:ENCdg ASCii')
+    S('WFMOutpre:BYT_Nr 1')
+    S('HEADer 0')
+    try:
+        ch1_np = np.array(Q('CURVe?').split(','))
+        ch1_np[len(ch1_np)-1] = ch1_np[len(ch1_np-1)].replace("\n","")
+        ch1_np = ch1_np.astype(np.int64)
+        tmp = max(ch1_np)
+        pydev.iointr('ch1', int(tmp))
+    except:
+        print("...failed")
+        pass
+
+    #S('DATa:SOUrce CH3')
+    #S('DATa:START 1')
+    #S('DATa:START {}'.format(DataPoint))
+    #S('WFMOutpre:ENCdg ASCii')
+    #S('WFMOutpre:BYT_Nr 1')
+    #S('HEADer 0')
+
+    #ch3_np = np.array(self.Q('CURVe?').split(','))
+    #ch3_np[len(ch3_np)-1] = ch3_np[len(ch3_np-1)].replace("\n","")
+    #ch3_np = ch3_np.astype(np.int64)
+
+    #pydev.iointr('ch3', max(ch3_np))
+
+    return 1
+'''
